@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
+const ANTHROPIC_API = "/api/claude";
 
 const callClaude = async (messages, system = "", maxTokens = 1200) => {
   const response = await fetch(ANTHROPIC_API, {
@@ -8,20 +8,22 @@ const callClaude = async (messages, system = "", maxTokens = 1200) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: maxTokens, system, messages }),
   });
+  if (!response.ok) { const e = await response.json().catch(()=>({})); throw new Error(e.error || "API error " + response.status); }
   const data = await response.json();
+  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
   return data.content?.[0]?.text || "";
 };
 
-// Fast call — low token budget for quick responses
 const callClaudeFast = async (messages, system = "") => {
   const response = await fetch(ANTHROPIC_API, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 600, system, messages }),
+    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 800, system, messages }),
   });
+  if (!response.ok) { const e = await response.json().catch(()=>({})); throw new Error(e.error || "API error " + response.status); }
   const data = await response.json();
   if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-  if (!data.content) throw new Error("No content in response: " + JSON.stringify(data).slice(0,200));
+  if (!data.content) throw new Error("No content: " + JSON.stringify(data).slice(0,200));
   return data.content[0]?.text || "";
 };
 
