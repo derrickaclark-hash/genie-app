@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-// Route through our server-side proxy so the API key stays secret
-const ANTHROPIC_API = "/api/claude";
+const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 
 const callClaude = async (messages, system = "", maxTokens = 1200) => {
   const response = await fetch(ANTHROPIC_API, {
@@ -10,19 +9,19 @@ const callClaude = async (messages, system = "", maxTokens = 1200) => {
     body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: maxTokens, system, messages }),
   });
   const data = await response.json();
-  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
   return data.content?.[0]?.text || "";
 };
 
+// Fast call — low token budget for quick responses
 const callClaudeFast = async (messages, system = "") => {
   const response = await fetch(ANTHROPIC_API, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 800, system, messages }),
+    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 600, system, messages }),
   });
   const data = await response.json();
   if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-  if (!data.content) throw new Error("No content in response: " + JSON.stringify(data).slice(0, 200));
+  if (!data.content) throw new Error("No content in response: " + JSON.stringify(data).slice(0,200));
   return data.content[0]?.text || "";
 };
 
@@ -430,7 +429,7 @@ Return this exact structure:
     const allBreakfast = [...(profile.kidsBreakfast||[]), ...(profile.customBreakfast||[])];
     const bfHint = allBreakfast.length ? allBreakfast.join(", ") : "seasonal fruits, whole grain bread, healthy snacks";
     const system = `You are a grocery list assistant. Return ONLY valid JSON — no markdown. Return an object where each key is a meal name (exact), and the value is an array of ingredient strings needed for that meal. Add one final key called "Breakfast & Snacks" with the breakfast/snack items as an array. Keep ingredient strings short (e.g. "chicken thighs", "garlic", "olive oil"). Do not duplicate items across meals.`;
-    const msg = `Build a per-meal grocery list for these dinners: ${approved.map(m=>`${m.name} (${m.day})`).join(", ")}. Dietary: ${profile.dietary.join(",")||"none"}. Also add "Breakfast & Snacks" key with: ${bfHint}.`;
+    const msg = `Build a per-meal grocery list for these dinners: ${approved.map(m=>`${m.name} on ${m.day} for ${m.portions||4} people`).join(", ")}. Scale ingredient quantities for the number of people per meal. Dietary: ${profile.dietary.join(",")||"none"}. Also add "Breakfast & Snacks" key with: ${bfHint}.`;
     const raw = await callClaude([{role:"user",content:msg}], system, 1400);
     try { setGroceryList(safeParseJSON(raw)); } catch { setGroceryList({}); }
     setLoadingG(false);
@@ -442,12 +441,13 @@ Return this exact structure:
     const allBreakfast = [...(profile.kidsBreakfast||[]), ...(profile.customBreakfast||[])];
     const bfItems = allBreakfast.length ? allBreakfast.join(", ") : "seasonal fruits, whole grain bread, and healthy snacks";
     const recipeDetails = approved.map(m=>{
+      const portions = m.portions || 4;
       const lib = recipeLibrary.find(r=>r.name===m.name);
       return lib
-        ? `${m.day} — ${m.name}${lib.url ? ` [recipe: ${lib.url}]` : ""}${lib.notes ? ` (note: ${lib.notes})` : ""}: use the linked recipe`
-        : `${m.day} — ${m.name} (${m.prepTime})`;
+        ? `${m.day} — ${m.name} for ${portions} people${lib.url ? ` [recipe: ${lib.url}]` : ""}${lib.notes ? ` (note: ${lib.notes})` : ""}: use linked recipe, scale for ${portions} servings`
+        : `${m.day} — ${m.name} (${m.prepTime}) — serves ${portions} people`;
     }).join("\n");
-    const system = `You are writing concise chef instructions for a home cook. Use plain text only — no markdown, no asterisks. For each meal: one header line (DAY — MEAL NAME — total time), then 4-6 numbered steps covering key techniques, temperatures, and timing. Keep each meal under 120 words. End with a brief breakfast/snacks note and a one-line groceries note.`;
+    const system = `You are writing concise chef instructions for a home cook. Use plain text only — no markdown, no asterisks. For each meal: one header line (DAY — MEAL NAME — serves X people — total time), then 4-6 numbered steps with quantities scaled for the number of people, key techniques, temperatures, and timing. Keep each meal under 150 words. End with a brief breakfast/snacks note and a one-line groceries note.`;
     const msg = `Write chef instructions for a ${profile.expertise}-level cook. Meals this week:\n${recipeDetails}\n\nAfter all meals add: "Breakfast & Snacks: ${bfItems}"\nEnd with: "Groceries arriving from Whole Foods pickup — let us know if anything is missing."\nDietary restrictions: ${profile.dietary.join(", ") || "none"}.\nBe concise — cover every meal but keep each one brief.`;
     const text = await callClaude([{role:"user",content:msg}], system, 3000);
     setChefInstructions(text);
@@ -842,6 +842,14 @@ Return this exact structure:
                                     <option key={d} value={d}>{d}</option>
                                   ))}
                                 </select>
+                                <select
+                                  value={m.portions || 4}
+                                  onChange={e => setMeals(prev => prev.map((meal,j) => j===i ? {...meal, portions: Number(e.target.value)} : meal))}
+                                  style={{fontSize:12,color:t.warm,fontFamily:"'DM Sans',sans-serif",background:t.warmLight,border:"1px solid " + t.warm,padding:"3px 6px",borderRadius:8,cursor:"pointer",outline:"none",fontWeight:600}}>
+                                  {[1,2,3,4,5,6,7,8].map(n=>(
+                                    <option key={n} value={n}>{n} people</option>
+                                  ))}
+                                </select>
                                 <div style={{fontSize:11,color:t.muted,fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}}>{m.prepTime}</div>
                                 {approvedMeals[i] && <button onClick={()=>swapMeal(i)} title="Swap this meal" style={{background:"transparent",border:"none",cursor:"pointer",fontSize:16,padding:"1px 3px"}}>🔄</button>}
                               </div>
@@ -1056,7 +1064,7 @@ Return this exact structure:
                           <span style={{fontSize:18}}>{isBreakfast ? "🍱" : (mealObj?.emoji || "🍽️")}</span>
                           <div>
                             <div style={{fontWeight:700,fontSize:14,color:t.text}}>{meal}</div>
-                            {mealObj?.day && <div style={{fontSize:11,color:t.muted,fontFamily:"'DM Sans',sans-serif"}}>{mealObj.day} · {mealObj.prepTime}</div>}
+                            {mealObj?.day && <div style={{fontSize:11,color:t.muted,fontFamily:"'DM Sans',sans-serif"}}>{mealObj.day} · {mealObj.prepTime} · {mealObj.portions||4} people</div>}
                           </div>
                         </div>
                         {(orderedCount+haveCount)>0 && (
