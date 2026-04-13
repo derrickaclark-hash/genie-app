@@ -325,10 +325,10 @@ export default function Genie() {
     const allVeggies  = [...(profile.foods.veggies||[]),  ...(profile.customFoods.veggies||[])];
     const allGrains   = [...(profile.foods.grains||[]),   ...(profile.customFoods.grains||[])];
     const alreadySeen = [...pastWeekMeals.map(m=>m.name), ...keepLiked.map(m=>m.name)];
-    const system = `You are a meal planning assistant. Return ONLY a valid JSON array of exactly 10 dinner idea objects: [{"name":"...","description":"5 words max","emoji":"...","difficulty":"..."},...]. No markdown, no explanation.`;
+    const system = `You are a meal planning assistant. Return ONLY a valid JSON array of exactly 10 dinner idea objects. Format: [{"name":"Meal Name","description":"brief 4 word description","emoji":"single emoji","difficulty":"easy"}]. Start your response with [ and end with ]. No markdown, no text before or after.`;
     const msg = `Profile: expertise=${profile.expertise}, cuisines=${profile.cuisines.join(",")}, dietary=${profile.dietary.join(",")||"none"}, proteins=${allProteins.join(",")}, veggies=${allVeggies.join(",")}, grains=${allGrains.join(",")}. Rotation favorites: ${rotFavs||"none"}. Do NOT suggest any of these: ${alreadySeen.join(", ")||"none"}. Known family recipes to possibly include: ${libNames||"none"}. Return 10 diverse dinners for a ${profile.expertise} cook.`;
     try {
-      const raw = await callClaudeFast([{role:"user",content:msg}], system);
+      const raw = await callClaude([{role:"user",content:msg}], system, 1000);
       const parsed = parsePartialMeals(raw);
       if (parsed.length > 0) {
         // Put liked items first (pinned), then new suggestions
@@ -357,8 +357,8 @@ export default function Genie() {
     const liked = suggestions.filter(s=>s.liked).map(s=>s.name);
     const rotFavs = rotation.filter(r=>r.inRotation&&r.rating>=4).map(r=>r.name);
     const libNames = recipeLibrary.map(r=>r.name);
-    const system = `You are a meal planning assistant. Return ONLY a JSON array: [{name,day,description,ingredients,prepTime,emoji}]. No markdown.`;
-    const msg = `Create exactly ${profile.mealCount} dinners. Liked: ${liked.join(",")||"none"}. Family favorites: ${rotFavs.join(",")||"none"}. Known family recipes to potentially include: ${libNames.join(",")||"none"}. Profile: expertise=${profile.expertise}, dietary=${profile.dietary.join(",")||"none"}, cuisines=${profile.cuisines.join(",")}. Assign different weekdays. Include variety.`;
+    const system = `You are a meal planning assistant. Return ONLY a valid JSON array: [{name,day,description,ingredients,prepTime,emoji}]. Start with [ end with ]. No markdown, no extra text.`;
+    const msg = `Create exactly ${profile.mealCount} dinners for the week. REQUIRED: You MUST include ALL of these exact meals that were selected: ${liked.join(", ")||"none — use your best judgment"}. These are non-negotiable — include them word for word. Then fill remaining slots with complementary meals. Also consider: family favorites: ${rotFavs.join(",")||"none"}, known recipes: ${libNames.join(",")||"none"}. Profile: expertise=${profile.expertise}, dietary=${profile.dietary.join(",")||"none"}, cuisines=${profile.cuisines.join(",")}. Assign a different weekday to each meal.`;
     const raw = await callClaude([{role:"user",content:msg}], system, 1500);
     try {
       const p=safeParseJSON(raw);
