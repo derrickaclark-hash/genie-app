@@ -210,9 +210,9 @@ function AddCustomItem({ onAdd, placeholder = "Add your own…" }) {
   );
 }
 
-const STEP_IDX = { expertise:0, preferences:1, foods:2, breakfast:3, mealcount:4, inspire:5, plan:6, review:7, nanny:8, feedback:9, done:10 };
+const STEP_IDX = { expertise:0, preferences:1, foods:2, breakfast:3, mealcount:4, pastmeals:5, inspire:6, plan:7, review:8, nanny:9, feedback:10, done:11 };
 function Progress({ step }) {
-  const cur = STEP_IDX[step] ?? 0; const total = 10;
+  const cur = STEP_IDX[step] ?? 0; const total = 11;
   return <div style={{display:"flex",gap:4,alignItems:"center"}}>{Array.from({length:total}).map((_,i)=><div key={i} style={{width:i<cur?16:8,height:8,borderRadius:4,background:i<cur?t.accentLight:i===cur?"#fff":"rgba(255,255,255,0.3)",transition:"all 0.3s ease"}} />)}</div>;
 }
 
@@ -705,6 +705,81 @@ Return this exact structure:
 
             <div style={{display:"flex",gap:12,justifyContent:"space-between"}}>
               <Btn variant="secondary" onClick={()=>setStep("breakfast")}>← Back</Btn>
+              <Btn onClick={()=>setStep("pastmeals")}>Continue →</Btn>
+            </div>
+          </div>
+        )}
+
+        {/* ── PAST MEALS ── */}
+        {step==="pastmeals" && (
+          <div>
+            <h2 style={{fontSize:24,fontWeight:700,marginBottom:6}}>Use a Past Recipe?</h2>
+            <p style={{color:t.muted,fontFamily:"'DM Sans',sans-serif",marginBottom:20}}>Tap any meal you'd like to include again this week. Or skip ahead.</p>
+
+            {(rotation.length === 0 && pastWeekMeals.length === 0) ? (
+              <Notice icon="💡">No past meals yet — this fills in after your first week with Genie.</Notice>
+            ) : (
+              <>
+                {rotation.filter(r=>r.inRotation).length > 0 && (
+                  <div style={{marginBottom:20}}>
+                    <div style={{fontSize:11,fontFamily:"'DM Sans',sans-serif",color:t.muted,fontWeight:700,marginBottom:10,textTransform:"uppercase",letterSpacing:"0.06em"}}>⭐ Your Approved Rotation</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      {rotation.filter(r=>r.inRotation).map((meal,i)=>{
+                        const already = suggestions.some(s=>s.name===meal.name&&s.liked);
+                        return (
+                          <div key={i} onClick={()=>{
+                            if (already) {
+                              setSuggestions(prev=>prev.filter(s=>s.name!==meal.name));
+                            } else {
+                              setSuggestions(prev=>[...prev.filter(s=>s.name!==meal.name), {name:meal.name,emoji:"⭐",description:"Family favorite",difficulty:"known",liked:true}]);
+                            }
+                          }} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderRadius:14,border:"2px solid " + (already?t.accentLight:t.border),background:already?t.accentPale:t.card,cursor:"pointer",transition:"all 0.15s"}}>
+                            <div style={{width:22,height:22,borderRadius:5,border:"2px solid " + (already?t.accent:t.border),background:already?t.accent:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                              {already && <span style={{color:"#fff",fontSize:12,fontWeight:700}}>✓</span>}
+                            </div>
+                            <div style={{flex:1}}>
+                              <div style={{fontWeight:700,fontSize:14}}>{meal.name}</div>
+                              <div style={{fontSize:12,color:t.muted,fontFamily:"'DM Sans',sans-serif"}}>{"★".repeat(meal.rating||0)} rated · approved for rotation</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {pastWeekMeals.filter(m=>!rotation.find(r=>r.name===m.name&&r.inRotation)).length > 0 && (
+                  <div style={{marginBottom:20}}>
+                    <div style={{fontSize:11,fontFamily:"'DM Sans',sans-serif",color:t.muted,fontWeight:700,marginBottom:10,textTransform:"uppercase",letterSpacing:"0.06em"}}>🕐 From Last Week</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      {pastWeekMeals.filter(m=>!rotation.find(r=>r.name===m.name&&r.inRotation)).map((meal,i)=>{
+                        const already = suggestions.some(s=>s.name===meal.name&&s.liked);
+                        return (
+                          <div key={i} onClick={()=>{
+                            if (already) {
+                              setSuggestions(prev=>prev.filter(s=>s.name!==meal.name));
+                            } else {
+                              setSuggestions(prev=>[...prev.filter(s=>s.name!==meal.name), {name:meal.name,emoji:"🕐",description:"Made last week",difficulty:"known",liked:true}]);
+                            }
+                          }} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderRadius:14,border:"2px solid " + (already?t.accentLight:t.border),background:already?t.accentPale:t.card,cursor:"pointer",transition:"all 0.15s"}}>
+                            <div style={{width:22,height:22,borderRadius:5,border:"2px solid " + (already?t.accent:t.border),background:already?t.accent:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                              {already && <span style={{color:"#fff",fontSize:12,fontWeight:700}}>✓</span>}
+                            </div>
+                            <div style={{flex:1}}>
+                              <div style={{fontWeight:700,fontSize:14}}>{meal.name}</div>
+                              <div style={{fontSize:12,color:t.muted,fontFamily:"'DM Sans',sans-serif"}}>Made {meal.date||"recently"}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            <div style={{display:"flex",gap:12,justifyContent:"space-between",marginTop:8}}>
+              <Btn variant="secondary" onClick={()=>setStep("mealcount")}>← Back</Btn>
               <Btn onClick={getInspirations}>Get Meal Ideas →</Btn>
             </div>
           </div>
@@ -788,7 +863,7 @@ Return this exact structure:
                 </div>
 
                 <div style={{display:"flex",gap:12,justifyContent:"space-between"}}>
-                  <Btn variant="secondary" onClick={()=>setStep("mealcount")}>← Back</Btn>
+                  <Btn variant="secondary" onClick={()=>setStep("pastmeals")}>← Back</Btn>
                   <Btn onClick={buildMealPlan}>Build My Meal Plan →</Btn>
                 </div>
               </>
@@ -1234,7 +1309,8 @@ Return this exact structure:
                   </Card>
                 )}
 
-                <div style={{marginTop:8}}>
+                <div style={{display:"flex",gap:12,marginTop:8,flexWrap:"wrap"}}>
+                  <Btn variant="secondary" onClick={()=>setStep("review")}>← Back</Btn>
                   <Btn variant="warm" onClick={()=>setStep("feedback")}>Rate Last Week →</Btn>
                 </div>
               </>
@@ -1269,8 +1345,9 @@ Return this exact structure:
                 </div>
               </Card>
             ))}
-            <div style={{textAlign:"center",marginTop:16}}>
-              <Btn onClick={submitFeedback} variant="warm">Save Feedback & Finish</Btn>
+            <div style={{display:"flex",gap:12,justifyContent:"space-between",marginTop:16}}>
+              <Btn variant="secondary" onClick={()=>setStep("nanny")}>← Back</Btn>
+              <Btn onClick={submitFeedback} variant="warm">Save & Finish</Btn>
             </div>
           </div>
         )}
@@ -1291,7 +1368,10 @@ Return this exact structure:
                 </div>
               </Card>
             )}
-            <Btn onClick={finishWeek}>Start Next Week →</Btn>
+            <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+              <Btn variant="secondary" onClick={()=>setStep("feedback")}>← Back</Btn>
+              <Btn onClick={finishWeek}>Start Next Week →</Btn>
+            </div>
           </div>
         )}
 
