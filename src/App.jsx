@@ -6,7 +6,7 @@ const callClaude = async (messages, system = "", maxTokens = 1200) => {
   const response = await fetch(ANTHROPIC_API, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: maxTokens, system, messages }),
+    body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: maxTokens, system, messages }),
   });
   if (!response.ok) { const e = await response.json().catch(()=>({})); throw new Error(e.error || "API error " + response.status); }
   const data = await response.json();
@@ -18,7 +18,7 @@ const callClaudeFast = async (messages, system = "") => {
   const response = await fetch(ANTHROPIC_API, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 800, system, messages }),
+    body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 800, system, messages }),
   });
   if (!response.ok) { const e = await response.json().catch(()=>({})); throw new Error(e.error || "API error " + response.status); }
   const data = await response.json();
