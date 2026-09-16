@@ -1165,7 +1165,7 @@ Return this exact structure:
                               opacity: status==="have" ? 0.55 : 1, transition:"all 0.12s"}}>
                               {/* Item name + WF link */}
                               <a href={wholeFoodsItemUrl(item)} target="_blank" rel="noopener noreferrer"
-                                style={{flex:1,textDecoration:"none",fontSize:14,fontFamily:"'DM Sans',sans-serif",
+                                style={{flex:1,fontSize:14,fontFamily:"'DM Sans',sans-serif",
                                   color: status==="have" ? t.muted : t.text,
                                   textDecoration: status==="have" ? "line-through" : "none"}}>
                                 {item}
